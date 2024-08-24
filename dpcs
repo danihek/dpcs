@@ -1,6 +1,12 @@
 #!/usr/bin/env sh
 
+# Global variables
+ACTION=0
 VERBOSE=0
+CACHE_DIR="$HOME/.cache/dpcs"
+PROJECT_PATH="$CACHE_DIR/$PROJECT_HASH"
+SAVE_MSG_P1="# Write your dependecies here: (don't delete this comment, it can break script functionality)\n"
+SAVE_MSG_P2="DEPS=\"\""
 
 usage()
 {
@@ -38,23 +44,21 @@ do
           VERBOSE=1
             ;;
         "rm")
-            action=0
+            ACTION=1
             ;;
         "edit")
-            action=1
+            ACTION=2
             ;;
         "add")
-            action=2
+            ACTION=3
             ;;
         *)
-          usage
-          exit
+          [ "$ACTION" -eq "3" ] && added_item="$arg" || { 
+            usage exit
+          }
             ;;
     esac
 done
-
-CACHE_DIR="$HOME/.cache/dpcs"
-PROJECT_PATH="$CACHE_DIR/$PROJECT_HASH"
 
 # Check if the current directory is a Git repository
 if git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
@@ -74,20 +78,33 @@ log "PROJECT_PATH: $PROJECT_PATH"
 [ -d "$CACHE_DIR" ] || mkdir "$CACHE_DIR" 2> /dev/null || err "Failed to create dpcs cache directory"
 
 # Check if git repo in current directory has stored dependecies, if not create file from hash of initial commit and add dependecies in $DEPS variable
-[ -f "$PROJECT_PATH" ] ||
-{ 
-  echo -e "# Write your dependecies here: (don't delete this comment, it can break script functionality)\nDEPS=\"\"" >> $PROJECT_PATH || err "Cannot write $PROJECT_PATH"
-
-  file_size=$(wc -c $PROJECT_PATH)
-
-  $EDITOR $PROJECT_PATH
-  
-  [ "$file_size" == "$(wc -c $PROJECT_PATH)" ] &&
+if [ "$ACTION" -eq "0" ]; then
+  [ -f "$PROJECT_PATH" ] ||
   { 
-    rm $PROJECT_PATH
-    err "No dependecies provided"
-  }
-} 
+    echo -e "$SAVE_MSG_P1 $SAVE_MSG_P2" >> $PROJECT_PATH || err "Cannot write $PROJECT_PATH"
+  
+    file_size=$(wc -c $PROJECT_PATH)
+  
+    $EDITOR $PROJECT_PATH
+    
+    [ "$file_size" == "$(wc -c $PROJECT_PATH)" ] &&
+    { 
+      rm $PROJECT_PATH
+      err "No dependecies provided"
+    }
+  } 
+elif [ "$ACTION" -eq "1" ]; then
+  read -p "Are u sure? (y/n): " answer
+  [ "$answer" == "y" ] && rm $PROJECT_PATH
+elif [ "$ACTION" -eq "2" ]; then
+    $EDITOR $PROJECT_PATH
+    exit
+elif [ "$ACTION" -eq "2" ]; then
+    source "$PROJECT_PATH" || err "Error while sourcing: $PROJECT_PATH"
+    echo -e "$SAVE_MSG_P1"
+    echo "DEPS=\"$DEPS $added_item\"" > $PROJECT_PATH
+    exit
+fi
 
 # Source file to get access to content of $DEPS variable
 source "$PROJECT_PATH" || err "Error while sourcing: $PROJECT_PATH"
@@ -95,9 +112,8 @@ source "$PROJECT_PATH" || err "Error while sourcing: $PROJECT_PATH"
 pkgPaths=""
 
 while IFS= read -r line; do
-  line_path=$(pkg-config $line 2>/dev/null) && pkgPaths="$line_path " || log "Cannot find $line"
+  line_path=$(pkg-config --cflags $line 2>/dev/null | cut -d'I' -f 2) && pkgPaths+="$line_path " || log "Cannot find $line"
 done <<< $(printf "%s\n" ${DEPS// /$'\n'})
-
 
 log "DEPENDECIES: $DEPS"
 log "PATHS: $pkgPaths"
