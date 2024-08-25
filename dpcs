@@ -166,4 +166,7 @@ pathAndLine=$(rg -g '!{./}' "" $pkgPaths --line-number | fzf --ansi --color 'hl:
 path_to_file=$(echo $pathAndLine | cut -d":" -f 2)
 line_of_file=$(echo $pathAndLine | cut -d":" -f 1)
 
-nvim -c $path_to_file $line_of_file
+[ "$EDITOR" == "vim" ] && $EDITOR -c $path_to_file $line_of_file
+[ "$EDITOR" == "nvim" ] && $EDITOR -c $path_to_file $line_of_file
+
+$EDITOR -c $path_to_file $line_of_file
