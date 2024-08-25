@@ -1,14 +1,8 @@
 # dpcs - dependency check search
 
-## Usage: dpcs [command] [value]
+I created this script to have quicker access to source code of libraries that I use (wlroots, wayland etc) to lookup for **something**
 
-### Arguments:
-  ``-v                Verbose, enable log``
 
-### Commands:
-  ``rm                Remove cashed file (ex. dpcs rm)``
-  
-  ``edit              Edit dependecies (ex. dpcs edit)``
-  
-  ``add [dependency]  Add dependency (ex. dpcs add "wayland-server")``
-  
+## Usage:
+
+Run ``dpcs`` in your project directory.

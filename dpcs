@@ -3,6 +3,8 @@
 # Global variables
 ACTION=0
 VERBOSE=0
+pkgPaths=""
+added_item=""
 CACHE_DIR="$HOME/.cache/dpcs"
 PROJECT_PATH="$CACHE_DIR/$PROJECT_HASH"
 SAVE_MSG_P1="# Write your dependecies here: (don't delete this comment, it can break script functionality)\n"
@@ -17,6 +19,7 @@ usage()
     echo -e "\nCommands:"
     echo "  rm                Remove cashed file (ex. $0 rm)"
     echo "  edit              Edit dependecies (ex. $0 edit)"
+    echo "  list              List dependecies (ex. $0 list)"
     echo "  add  [dependency] Add dependency (ex. $0 add \"wayland-server\")"
 }
 
@@ -49,13 +52,19 @@ do
         "edit")
             ACTION=2
             ;;
-        "add")
+        "list")
             ACTION=3
             ;;
+        "add")
+            ACTION=4
+            ;;
         *)
-          [ "$ACTION" -eq "3" ] && added_item="$arg" || { 
-            usage exit
-          }
+          if [ "$ACTION" -eq "4" ] && [ "$added_item" == "" ]; then 
+            added_item="$arg"
+          else
+            usage
+            exit
+          fi
             ;;
     esac
 done
@@ -93,23 +102,55 @@ if [ "$ACTION" -eq "0" ]; then
       err "No dependecies provided"
     }
   } 
+
+  # rm
 elif [ "$ACTION" -eq "1" ]; then
-  read -p "Are u sure? (y/n): " answer
-  [ "$answer" == "y" ] && rm $PROJECT_PATH
+  if [ -f "$PROJECT_PATH" ]; then 
+    read -p "Are u sure? (y/n): " answer
+    [ "$answer" != "y" ] && exit 
+    rm $PROJECT_PATH
+    exit
+  else
+    err "No dependencies available for this project"
+  fi
+
+  # edit
 elif [ "$ACTION" -eq "2" ]; then
+  if [ -f "$PROJECT_PATH" ]; then
     $EDITOR $PROJECT_PATH
     exit
-elif [ "$ACTION" -eq "2" ]; then
+  else
+    err "No dependencies available for this project"
+  fi
+
+  # list
+elif [ "$ACTION" -eq "3" ]; then
+  if [ -f "$PROJECT_PATH" ]; then
     source "$PROJECT_PATH" || err "Error while sourcing: $PROJECT_PATH"
-    echo -e "$SAVE_MSG_P1"
-    echo "DEPS=\"$DEPS $added_item\"" > $PROJECT_PATH
+    echo $DEPS | sed 's/ /\n/g'
     exit
+  else
+    err "No dependencies available for this project"
+  fi
+
+  # add
+elif [ "$ACTION" -eq "4" ]; then
+  if [ -f "$PROJECT_PATH" ]; then
+    if [ "$added_item" != "" ]; then
+      source "$PROJECT_PATH" || err "Error while sourcing: $PROJECT_PATH"
+      echo -e "$SAVE_MSG_P1" > $PROJECT_PATH
+      echo "DEPS=\"$DEPS $added_item\"" >> $PROJECT_PATH
+      exit
+    else
+      err "You have to provide dependency name"
+    fi
+  else
+    err "No dependencies available for this project"
+  fi
 fi
 
 # Source file to get access to content of $DEPS variable
 source "$PROJECT_PATH" || err "Error while sourcing: $PROJECT_PATH"
-
-pkgPaths=""
 
 while IFS= read -r line; do
   line_path=$(pkg-config --cflags $line 2>/dev/null | cut -d'I' -f 2) && pkgPaths+="$line_path " || log "Cannot find $line"
@@ -118,7 +159,7 @@ done <<< $(printf "%s\n" ${DEPS// /$'\n'})
 log "DEPENDECIES: $DEPS"
 log "PATHS: $pkgPaths"
 
-pathAndLine=$(rg "" $pkgPaths --line-number | fzf --ansi --color 'hl:-1:underline,hl+:-1:underline:reverse' --delimiter ':' --preview "bat --color=always {1} --highlight-line {2} | tail -n +{2}" --preview-window='70%' --height='100%' --with-nth 1,3.. --exact)
+pathAndLine=$(rg -g '!{./}' "" $pkgPaths --line-number | fzf --ansi --color 'hl:-1:underline,hl+:-1:underline:reverse' --delimiter ':' --preview "bat --color=always {1} --highlight-line {2} | tail -n +{2}" --preview-window='70%' --height='100%' --with-nth 1,3.. --exact)
 
 [ $? != 0 ] && exit
 
