@@ -7,6 +7,7 @@ Currently it's working only for C libraries with pkg-config.
 ## Dependecies:
 - fzf
 - bat
+- pkg-config
 - git (optional)
 - some text editor, works best with **vim** and **nvim**
 
