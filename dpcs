@@ -12,15 +12,15 @@ SAVE_MSG_P2="DEPS=\"\""
 
 usage()
 {
-    echo "Usage: $0 [command] [value]"
+    echo "Usage: dpcs [command] [value]"
     echo "Arguments:"
     echo "  -h                This message"
     echo "  -v                Verbose, enable log"
     echo -e "\nCommands:"
-    echo "  rm                Remove cashed file (ex. $0 rm)"
-    echo "  edit              Edit dependecies (ex. $0 edit)"
-    echo "  list              List dependecies (ex. $0 list)"
-    echo "  add  [dependency] Add dependency (ex. $0 add \"wayland-server\")"
+    echo "  rm                Remove cashed file (ex. dpcs rm)"
+    echo "  edit              Edit dependecies (ex. dpcs edit)"
+    echo "  list              List dependecies (ex. dpcs list)"
+    echo "  add  [dependency] Add dependency (ex. dpcs add \"wayland-server\")"
 }
 
 err()
